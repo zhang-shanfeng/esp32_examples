@@ -64,8 +64,9 @@ void app_main(void)
         ESP_LOGI(TAG, "Message task created successfully");
     }
 
-    while (1) {
-        ESP_LOGI(TAG, "Main Task Running");
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
+    // while (1) {
+    //     ESP_LOGI(TAG, "Main Task Running");
+    //     vTaskDelay(pdMS_TO_TICKS(1000));
+    // }
+    vTaskDelete(NULL); // 删除主任务
 }
