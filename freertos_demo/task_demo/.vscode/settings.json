@@ -5,9 +5,10 @@
     "idf.customExtraVars": {
         "IDF_TARGET": "esp32s3"
     },
-    "idf.flashType": "JTAG",
+    "idf.flashType": "UART",
     "idf.port": "/dev/ttyACM0",
     "idf.espIdfPath": "/home/xtp/esp/v5.5/esp-idf",
     "idf.toolsPath": "/home/xtp/.espressif",
-    "idf.pythonInstallPath": "/usr/bin/python"
+    "idf.pythonInstallPath": "/usr/bin/python",
+    "idf.currentSetup": "/home/xtp/esp/v5.5/esp-idf"
 }

@@ -30,5 +30,6 @@
   },
   "idf.espIdfPath": "/home/zsf/esp/v5.4.1",
   "idf.toolsPath": "/home/zsf/.espressif",
-  "idf.pythonInstallPath": "/usr/bin/python3"
+  "idf.pythonInstallPath": "/usr/bin/python3",
+  "idf.currentSetup": "/home/xtp/esp/v5.5/esp-idf"
 }

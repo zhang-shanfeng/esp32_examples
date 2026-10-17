@@ -16,7 +16,18 @@ TaskHandle_t motor_handle = NULL;
 #define Key_PIN_NUM GPIO_NUM_0
 #define MOTOR_PIN_NUM GPIO_NUM_11
 
-// 单击回调函数
+/**************************************************************************************************
+ * @brief 按键单击回调函数
+ *
+ * @param arg
+ * @param data
+ * @date 2026-02-19
+ * @details
+ * @Call 该函数调用的其他函数
+ * @Caller 调用该函数的其他函数
+ * @author 小土坡
+ * @note
+ *************************************************************************************************/
 static void button_single_click_cb(void *arg, void *data)
 {
     iot_button_print_event((button_handle_t)arg);
@@ -47,35 +58,69 @@ static void button_single_click_cb(void *arg, void *data)
     }
 }
 
-// 长按回调
+/**************************************************************************************************
+ * @brief 长按回调函数
+ *
+ * @param arg
+ * @param data
+ * @date 2026-02-19
+ * @details
+ * @Call 该函数调用的其他函数
+ * @Caller 调用该函数的其他函数
+ * @author 小土坡
+ * @note
+ *************************************************************************************************/
 static void on_button_long_press(void *arg, void *data)
 {
     iot_button_print_event((button_handle_t)arg);
     printf("Button long pressed\n");
 }
 
+/**************************************************************************************************
+ * @brief 按键初始化函数
+ *
+ * @param button_num
+ * @date 2026-02-19
+ * @details
+ * @Call 该函数调用的其他函数
+ * @Caller 调用该函数的其他函数
+ * @author 小土坡
+ * @note
+ *************************************************************************************************/
 void xtp_button_init(uint32_t button_num)
 {
-    button_config_t btn_cfg = {0};
+    button_config_t btn_cfg = {0}; // 这里可以直接这样写，组件函数内部会自动设置默认值
     button_gpio_config_t gpio_cfg = {
         .gpio_num = button_num,
         .active_level = 0,
-        .enable_power_save = true, // 兼容省点模式
+        .enable_power_save = true, // 兼容省电模式
         .disable_pull = false      // 使用内部上拉电阻
     };
 
     button_handle_t btn;
 
+    /* 新建一个 GPIO 按键设备 */
     esp_err_t ret = iot_button_new_gpio_device(&btn_cfg, &gpio_cfg, &btn);
     assert(ret == ESP_OK);
 
+    /* 注册两个按键事件函数 */
     ret = iot_button_register_cb(btn, BUTTON_SINGLE_CLICK, NULL, button_single_click_cb, NULL);
     ret |= iot_button_register_cb(btn, BUTTON_LONG_PRESS_START, NULL, on_button_long_press, NULL);
 
     assert(ret == ESP_OK);
 }
 
-// 创建一个LED任务
+/**************************************************************************************************
+ * @brief LED 任务
+ *
+ * @param vParam
+ * @date 2026-02-17
+ * @details
+ * @Call 该函数调用的其他函数
+ * @Caller 调用该函数的其他函数
+ * @author 小土坡
+ * @note
+ *************************************************************************************************/
 void led_task(void *vParam)
 {
     // 设置日志级别
@@ -91,6 +136,17 @@ void led_task(void *vParam)
     }
 }
 
+/**************************************************************************************************
+ * @brief 震动马达任务
+ *
+ * @param vparam
+ * @date 2026-02-17
+ * @details
+ * @Call 该函数调用的其他函数
+ * @Caller 调用该函数的其他函数
+ * @author 小土坡
+ * @note
+ *************************************************************************************************/
 void motor_task(void *vparam)
 {
     gpio_set_direction(MOTOR_PIN_NUM, GPIO_MODE_OUTPUT);
