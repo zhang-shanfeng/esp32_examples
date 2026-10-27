@@ -3,7 +3,7 @@
     {
       "name": "ESP-IDF",
       "compilerPath": "",
-      "compileCommands": "/home/xtp/work/esp32_examples/gpio_button_example_2.4/build/compile_commands.json",
+      "compileCommands": "/home/xtp/work/esp32_examples/ina226_lvgl_2.4LCD_button_example/build/compile_commands.json",
       "intelliSenseMode": "gcc-x86",
       "includePath": [
         "${workspaceFolder}/**"

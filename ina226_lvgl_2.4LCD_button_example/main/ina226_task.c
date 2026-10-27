@@ -26,8 +26,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/timers.h"
-#include "ina226.h"
-#include "lcd_lvgl_task.h"
+#include "page_ina226.h"
 #include "sdkconfig.h"
 
 static const char *TAG = "ina226";
@@ -91,6 +90,14 @@ void ina226_task(void *pvParameters)
         return;
     }
 
+    uint16_t manufacturer_id;
+    uint16_t die_id;
+    ina226_get_manufacturer_id(&ina, &manufacturer_id);
+    ina226_get_die_id(&ina, &die_id);
+    ESP_LOGI(TAG, "厂商ID:%d, DIE ID:%d", manufacturer_id, die_id);
+
+    current_alert_value_set(&ina, 0.015);
+
     struct ina226_value_t ina226_values;
     while (1)
     {
@@ -135,6 +142,44 @@ void ina226_task(void *pvParameters)
                  ina226_values.current,
                  ina226_values.power);
 
-        ui_update_number(ina226_values);
+        page_ina226_update_number(ina226_values);
     }
+}
+
+void voltage_alert_value_set(ina226_device_t *device, const float alert_value)
+{
+    ina226_set_alert_mask(device, INA226_ALERT_BUS_OVER_VOLTAGE);
+    ina226_set_bus_voltage_alert_limit(device, alert_value);
+}
+
+void current_alert_value_set(ina226_device_t *device,
+                             const float alert_current_a)
+{
+    // INA226 没有独立的电流超限报警位，电流报警复用分流电压超限(SOL)
+    ina226_set_alert_mask(device, INA226_ALERT_SHUNT_OVER_VOLTAGE);
+
+    // 将电流阈值转换为分流电压阈值：V_shunt = I * R_shunt
+    // 假设 device->r_shunt_ohms 已在初始化时设置
+    float alert_shunt_voltage_v = alert_current_a * device->config->r_shunt;
+
+    // 分流电压寄存器的 LSB 为 2.5uV (0.0000025V)
+    // 计算写入 Alert Limit Register 的原始值
+    uint16_t alert_limit_raw = (uint16_t)(alert_shunt_voltage_v / 0.0000025f);
+
+    ina226_set_alert_limit_raw(device, alert_limit_raw);
+}
+
+void power_alert_value_set(ina226_device_t *device, const float alert_power_w)
+{
+    // 使能功率超限报警 (POL, Bit 11)
+    ina226_set_alert_mask(device, INA226_ALERT_POWER_OVER_LIMIT);
+
+    // 功率寄存器的 LSB 取决于初始化时设置的 CURRENT_LSB
+    // 标准关系：Power_LSB = 25 * CURRENT_LSB
+    // 假设 device->current_lsb 已在 ina226_init 中根据校准值计算并保存
+    float power_lsb = 25.0f * device->current_lsb;
+
+    uint16_t alert_limit_raw = (uint16_t)(alert_power_w / power_lsb);
+
+    ina226_set_alert_limit_raw(device, alert_limit_raw);
 }

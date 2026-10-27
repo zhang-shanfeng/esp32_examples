@@ -12,5 +12,6 @@
 - [x] Button
 - [x] LVGL + LCD
 - [x] INA226
+- [ ] 实体 ADC Button 与 LVGL 交互
 
 ![ina226_ui_test](./ina226_ui_test.png)

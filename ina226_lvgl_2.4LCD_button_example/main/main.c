@@ -8,27 +8,17 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "ina226_task.h"
-#include "lcd_lvgl_task.h"
+#include "lvgl_app.h"
 #include "sdkconfig.h"
 #include "utility_c.h"
 
 static const char *TAG = "gpio_button_example";
 
-extern esp_lcd_panel_io_handle_t io_handle;
-extern esp_lcd_panel_handle_t panel_handle;
-
 void app_main(void)
 {
     button_task_init();
-    lcd_init();
-    lvgl_init(io_handle, panel_handle);
 
-    if (lvgl_port_lock(0))
-    {
-        ESP_LOGI(TAG, "ui_init()");
-        ui_init();
-        lvgl_port_unlock();
-    }
+    lvgl_app_init();
 
     xTaskCreatePinnedToCore(ina226_task, "ina226_task", 4096, NULL, 0, NULL, 1);
 
