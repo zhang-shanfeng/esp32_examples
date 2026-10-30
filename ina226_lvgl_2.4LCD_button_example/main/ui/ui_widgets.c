@@ -18,6 +18,7 @@ lv_obj_t *ui_create_kv_row(lv_obj_t *parent, const struct ui_kv_row_cfg_t *cfg)
     if (cfg->pad_hor) { lv_obj_set_style_pad_hor(row, cfg->pad_hor, 0); }
 
     lv_obj_t *left = lv_label_create(row);
+
     if (cfg->title_font)
     {
         lv_obj_set_style_text_font(left, cfg->title_font, LV_STATE_DEFAULT);
@@ -32,7 +33,7 @@ lv_obj_t *ui_create_kv_row(lv_obj_t *parent, const struct ui_kv_row_cfg_t *cfg)
     /* 右侧动态数据标签 */
     lv_obj_t *right = lv_label_create(row);
     /* 设置一个固定宽度，以解决容器大小不固定 */
-    // lv_obj_set_width(right, 100);
+    lv_obj_set_width(right, LV_SIZE_CONTENT);
     if (cfg->value_font)
     {
         lv_obj_set_style_text_font(right, cfg->value_font, 0);

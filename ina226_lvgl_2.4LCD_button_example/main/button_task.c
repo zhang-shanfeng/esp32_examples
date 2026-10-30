@@ -13,9 +13,13 @@
 
 #include "button_adc.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "iot_button.h"
 
 static const char *TAG = "button_task";
+uint32_t g_current_lv_key = 0;
+SemaphoreHandle_t g_key_mutex = NULL;
 
 struct adc_button_range_t
 {
@@ -128,7 +132,52 @@ static void button_double_click_cb(void *arg, void *usr_data)
     ESP_LOGI(TAG, "Double Click on button index: %d", (int)(intptr_t)usr_data);
 }
 
-// --- 创建单个 ADC 按键的辅助函数 ---
+static void button_event_cb(void *arg, void *usr_data)
+{
+    int btn_id = (int)(intptr_t)usr_data;
+    button_event_t event = iot_button_get_event((button_handle_t)arg);
+    uint32_t lv_key = 0;
+
+    switch (btn_id)
+    {
+        case 1:
+            lv_key = LV_KEY_PREV;
+            break;
+        case 2:
+            lv_key = LV_KEY_NEXT;
+            break;
+        case 3:
+            lv_key = LV_KEY_ENTER;
+            break;
+        case 4:
+            lv_key = LV_KEY_UP;
+            break;  // 数值增加
+        case 5:
+            lv_key = LV_KEY_DOWN;
+            break;  // 数值减少
+        case 6:
+            lv_key = LV_KEY_LEFT;
+            break;  // 光标左移（选择高位）
+        case 7:
+            lv_key = LV_KEY_RIGHT;
+            break;  // 光标右移（选择低位）
+        default:
+            break;
+    }
+
+    if (event == BUTTON_PRESS_DOWN)
+    {
+        xSemaphoreTake(g_key_mutex, portMAX_DELAY);
+        g_current_lv_key = lv_key;
+        xSemaphoreGive(g_key_mutex);
+    }
+    else if (event == BUTTON_PRESS_UP || event == BUTTON_PRESS_END)
+    {
+        xSemaphoreTake(g_key_mutex, portMAX_DELAY);
+        if (g_current_lv_key == lv_key) { g_current_lv_key = 0; }
+        xSemaphoreGive(g_key_mutex);
+    }
+}
 
 /**************************************************************************************************
  * @brief 创建单个 ADC 按键
@@ -185,6 +234,9 @@ static button_handle_t create_adc_button(uint8_t index,
  *************************************************************************************************/
 void button_task_init(void)
 {
+    /* 创建互斥量 */
+    g_key_mutex = xSemaphoreCreateMutex();
+
     for (int i = 0; i < 8; i++)
     {
         button_handle_t btn = create_adc_button(
@@ -193,27 +245,32 @@ void button_task_init(void)
         if (btn)
         {
             iot_button_register_cb(btn,
-                                   BUTTON_SINGLE_CLICK,
+                                   BUTTON_PRESS_DOWN,
                                    NULL,
-                                   button_single_click_cb,
-                                   (void *)(intptr_t)(i + 1));
-
-            iot_button_register_cb(btn,
-                                   BUTTON_LONG_PRESS_START,
-                                   NULL,
-                                   button_long_press_start_cb,
-                                   (void *)(intptr_t)(i + 1));
-
-            iot_button_register_cb(btn,
-                                   BUTTON_DOUBLE_CLICK,
-                                   NULL,
-                                   button_double_click_cb,
+                                   button_event_cb,
                                    (void *)(intptr_t)(i + 1));
             iot_button_register_cb(btn,
-                                   BUTTON_LONG_PRESS_HOLD,
+                                   BUTTON_PRESS_UP,
                                    NULL,
-                                   button_long_press_hold_cb,
+                                   button_event_cb,
+                                   (void *)(intptr_t)(i + 1));
+            iot_button_register_cb(btn,
+                                   BUTTON_PRESS_END,
+                                   NULL,
+                                   button_event_cb,
                                    (void *)(intptr_t)(i + 1));
         }
     }
+}
+
+void keypad_read_cb(lv_indev_t *indev, lv_indev_data_t *data)
+{
+    xSemaphoreTake(g_key_mutex, portMAX_DELAY);
+    if (g_current_lv_key != 0)
+    {
+        data->key = g_current_lv_key;
+        data->state = LV_INDEV_STATE_PRESSED;
+    }
+    else { data->state = LV_INDEV_STATE_RELEASED; }
+    xSemaphoreGive(g_key_mutex);
 }

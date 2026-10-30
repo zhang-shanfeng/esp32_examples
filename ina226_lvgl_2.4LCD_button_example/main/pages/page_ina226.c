@@ -15,6 +15,7 @@ static void create_spinbox_group(lv_obj_t *parent);
 lv_obj_t *ina226_page_root = NULL;
 
 static struct ina226_ui_t ina226_ui;
+extern lv_group_t *ina226_group;
 
 void switch_to_ina226_page(void)
 {
@@ -40,12 +41,17 @@ void ina226_ui_init(lv_obj_t *parent)
     lv_style_init(&style_root);
     lv_style_set_bg_color(&style_root, lv_color_black());
     lv_style_set_bg_opa(&style_root, LV_OPA_100);
+    lv_style_set_size(&style_root, lv_pct(100), lv_pct(100));
 
-    /* 将根(parent) 设为 Flex 布局 */
-    lv_obj_set_layout(parent, LV_LAYOUT_FLEX);
-    /* 将根(parent) 的根设置为列布局 */
-    lv_obj_set_flex_flow(parent, LV_FLEX_FLOW_COLUMN);
+    static int32_t col_dsc[] = {
+        LV_GRID_FR(2), LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+    static int32_t row_dsc[] = {
+        LV_GRID_CONTENT, LV_GRID_CONTENT, LV_GRID_FR(1), LV_GRID_TEMPLATE_LAST};
+
+    lv_obj_set_grid_dsc_array(parent, col_dsc, row_dsc);
     lv_obj_set_style_pad_row(parent, 10, 0);
+    lv_obj_set_style_pad_column(parent, 10, 0);
+
     /* 给根容器 设置样式 */
     lv_obj_add_style(parent, &style_root, LV_STATE_DEFAULT);
 
@@ -93,7 +99,7 @@ static struct ui_kv_row_cfg_t make_ina226_kv_cfg(const char *title,
         .value_font = &ibm_plex_mono_medium_24_2bpp,
         .height = 0,
         .pad_ver = 4,
-        .pad_hor = 68,
+        .pad_hor = 0,
         .has_title_color = true,
         .title_color = lv_palette_darken(LV_PALETTE_DEEP_ORANGE, 1),
         .has_value_color = true,
@@ -114,12 +120,15 @@ static void create_page_header(lv_obj_t *parent, const char *text)
         lv_style_set_bg_opa(&style_top_cont, LV_OPA_100);
         lv_style_set_text_color(&style_top_cont,
                                 lv_palette_lighten(LV_PALETTE_AMBER, 1));
+        lv_style_set_pad_ver(&style_top_cont, 4);
+        lv_style_set_size(&style_top_cont, lv_pct(100), LV_SIZE_CONTENT);
     }
 
     /* 顶部容器 */
     lv_obj_t *top_cont = lv_obj_create(parent);
     lv_obj_remove_style_all(top_cont); /* 清除默认样式 */
-    lv_obj_set_size(top_cont, lv_pct(100), 40);
+    lv_obj_set_grid_cell(
+        top_cont, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_CENTER, 0, 1);
     lv_obj_add_style(top_cont, &style_top_cont, LV_STATE_DEFAULT);
 
     lv_obj_t *label_title = lv_label_create(top_cont);
@@ -133,33 +142,59 @@ static void create_page_header(lv_obj_t *parent, const char *text)
 
 void create_main_show_cont(lv_obj_t *parent)
 {
+    /*
+        布局说明
+        左右布局
+        左侧显示：电压，电流，功率显示
+        右侧显示：启动按钮
+        需要两层 flex
+    */
+
     /* 创建一个容器 */
-    lv_obj_t *cont = lv_obj_create(parent);
-    lv_obj_remove_style_all(cont);
-    lv_obj_set_layout(cont, LV_LAYOUT_FLEX);
-    lv_obj_set_flex_flow(cont, LV_FLEX_FLOW_COLUMN);
+    lv_obj_t *left = lv_obj_create(parent);
+    lv_obj_remove_style_all(left);
+    lv_obj_set_grid_cell(
+        left, LV_GRID_ALIGN_STRETCH, 0, 1, LV_GRID_ALIGN_STRETCH, 1, 1);
+    lv_obj_set_layout(left, LV_LAYOUT_FLEX);
+    lv_obj_set_flex_flow(left, LV_FLEX_FLOW_COLUMN);
     lv_obj_set_flex_align(
-        cont, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
-    lv_obj_set_size(cont, lv_pct(100), LV_SIZE_CONTENT);
-    lv_obj_set_style_margin_bottom(cont, 5, 0);
-    border_style_apply(cont);
+        left, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    border_style_apply(left);
     lv_obj_set_style_border_color(
-        cont, lv_palette_lighten(LV_PALETTE_ORANGE, 1), 0);
+        left, lv_palette_lighten(LV_PALETTE_ORANGE, 1), 0);
+    lv_obj_set_style_pad_all(left, 4, 0);
+    lv_obj_set_height(left, LV_SIZE_CONTENT);
 
     /* 电压行参数配置 */
     struct ui_kv_row_cfg_t cfg = make_ina226_kv_cfg("电压", "0.000V");
     /* 创建电压行 */
-    ina226_ui.label_voltage_val = ui_create_kv_row(cont, &cfg);
+    ina226_ui.label_voltage_val = ui_create_kv_row(left, &cfg);
 
     /* 电流行参数配置 */
     cfg = make_ina226_kv_cfg("电流", "0.000A");
     /* 创建电流行 */
-    ina226_ui.label_current_val = ui_create_kv_row(cont, &cfg);
+    ina226_ui.label_current_val = ui_create_kv_row(left, &cfg);
 
     /* 功率行参数配置 */
     cfg = make_ina226_kv_cfg("功率", "0.000W");
     /* 创建功率行 */
-    ina226_ui.label_power_val = ui_create_kv_row(cont, &cfg);
+    ina226_ui.label_power_val = ui_create_kv_row(left, &cfg);
+
+    /* 右侧：放启动按钮 */
+    lv_obj_t *right = lv_obj_create(parent);
+    lv_obj_remove_style_all(right);
+    lv_obj_set_grid_cell(
+        right, LV_GRID_ALIGN_STRETCH, 1, 1, LV_GRID_ALIGN_STRETCH, 1, 1);
+    border_style_apply(right);
+    lv_obj_set_height(right, LV_SIZE_CONTENT);
+
+    lv_obj_t *btn_start = lv_button_create(right);
+    lv_obj_align(btn_start, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_t *btn_start_label = lv_label_create(btn_start);
+    lv_obj_set_style_text_font(btn_start, &ibm_plex_mono_medium_18_2bpp, 0);
+    lv_label_set_text(btn_start_label, "Start");
+
+    lv_group_add_obj(ina226_group, btn_start);
 }
 
 /**************************************************************************************************
@@ -177,21 +212,34 @@ void create_main_show_cont(lv_obj_t *parent)
  *************************************************************************************************/
 void create_spinbox_group(lv_obj_t *parent)
 {
+    // lv_obj_update_layout(parent);
     static lv_style_t cont_style;
     lv_style_init(&cont_style);
-    lv_style_set_size(&cont_style, lv_pct(100), LV_SIZE_CONTENT);
     lv_style_set_layout(&cont_style, LV_LAYOUT_FLEX);
     lv_style_set_flex_flow(&cont_style, LV_FLEX_FLOW_ROW);
-    lv_style_set_pad_all(&cont_style, 10);
+    lv_style_set_pad_all(&cont_style, 4);
 
     lv_obj_t *cont = lv_obj_create(parent);
     lv_obj_remove_style_all(cont);
+    lv_obj_set_grid_cell(
+        cont, LV_GRID_ALIGN_STRETCH, 0, 2, LV_GRID_ALIGN_STRETCH, 2, 1);
+
     lv_obj_add_style(cont, &cont_style, 0);
+    lv_obj_set_flex_align(
+        cont, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
     border_style_apply(cont);
+    lv_obj_set_style_border_color(
+        cont, lv_palette_darken(LV_PALETTE_BLUE, 1), 0);
 
     ina226_ui.current_spinbox = lv_spinbox_create(cont);
     lv_spinbox_set_range(ina226_ui.current_spinbox, 0, 10000);
     lv_spinbox_set_digit_format(ina226_ui.current_spinbox, 5, 2);
     lv_spinbox_step_prev(ina226_ui.current_spinbox);
-    lv_obj_set_size(ina226_ui.current_spinbox, 100, LV_SIZE_CONTENT);
+    lv_obj_set_style_pad_all(ina226_ui.current_spinbox, 3, 0);
+    lv_obj_set_style_text_font(
+        ina226_ui.current_spinbox, &ibm_plex_mono_medium_24_2bpp, 0);
+    lv_obj_set_style_radius(ina226_ui.current_spinbox, 8, 0);
+    lv_obj_set_size(ina226_ui.current_spinbox, 120, LV_SIZE_CONTENT);
+
+    lv_group_add_obj(ina226_group, ina226_ui.current_spinbox);
 }

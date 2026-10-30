@@ -14,9 +14,10 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#include "lvgl.h"
 /* C 语言声明 */
 void button_task_init(void);
+void keypad_read_cb(lv_indev_t *indev, lv_indev_data_t *data);
 
 #ifdef __cplusplus
 }
